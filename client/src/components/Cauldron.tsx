@@ -1,14 +1,11 @@
+import { useAppStore } from "../store/app.store";
 import Ladle from "./Ladle";
 
-type CauldronProps = {
-  /** true while the automation runs: a ladle stirs the brew and it bubbles harder */
-  isLoading?: boolean;
-};
-
-function Cauldron({ isLoading = false }: CauldronProps) {
+function Cauldron() {
+  const { isAutomating } = useAppStore();
   return (
     <svg
-      className={`relative z-1 h-auto w-[72%] overflow-visible desk:h-full desk:w-auto desk:max-w-[72%]${isLoading ? " is-brewing" : ""}`}
+      className={`relative z-1 h-auto w-[72%] overflow-visible desk:h-full desk:w-auto desk:max-w-[72%]${isAutomating ? " is-brewing" : ""}`}
       viewBox="0 0 400 370"
       aria-hidden="true"
     >
@@ -178,7 +175,7 @@ function Cauldron({ isLoading = false }: CauldronProps) {
 
           {/* whirlpool, squashed into the surface ellipse: dark vortex arms
             with light highlights, plus a sinking dark centre */}
-          {isLoading && (
+          {isAutomating && (
             <g transform="translate(200 114) scale(1 0.19)">
               <g className="cd-swirl" fill="none" strokeLinecap="round">
                 <g stroke="#2E7A20" strokeWidth="14" strokeOpacity=".75">
@@ -211,7 +208,7 @@ function Cauldron({ isLoading = false }: CauldronProps) {
         </g>
 
         {/* witch's ladle — only while brewing (see Ladle.tsx for the stirring math) */}
-        {isLoading && <Ladle />}
+        {isAutomating && <Ladle />}
 
         {/* rim */}
         <ellipse

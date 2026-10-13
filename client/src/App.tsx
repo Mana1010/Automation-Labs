@@ -13,7 +13,6 @@ function App() {
     AUTOMATIONS.find((a) => a.id === selectedId) ?? AUTOMATIONS[0];
 
   // Set to true while the automation runs — the cauldron gets stirred with a ladle.
-  const isLoading = true;
 
   return (
     // Desktop (desk: 900px+): locked to one screen, no page scroll. Narrower: stacks and scrolls.
@@ -50,7 +49,7 @@ function App() {
           />
           <BrewForm />
         </div>
-        <CauldronStage isLoading={isLoading} />
+        <CauldronStage />
       </main>
     </div>
   );
