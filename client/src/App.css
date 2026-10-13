@@ -1,0 +1,193 @@
+/*
+  Hybrid styling: layout, spacing, colour and typography live in Tailwind classes
+  in the components. This file only keeps what plain CSS does better:
+  pseudo-elements, scrollbar styling, and SVG-internal animations that need
+  transform-box / descendant overrides (e.g. `.is-brewing .cd-bubble`).
+*/
+
+/* ---------- form card ---------- */
+/* candy-corn stripe on top of the card */
+.brew-form::before {
+  content: '';
+  position: absolute;
+  inset: 0 24px auto;
+  height: 4px;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(90deg, #ffe27a 0 33%, #ff7a1a 33% 66%, #f4eeff 66%);
+  opacity: 0.85;
+}
+.brew-form {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-2) transparent;
+}
+
+/* ---------- svg keyframes ---------- */
+@keyframes rise {
+  0% { transform: translateY(0); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateY(-34px); opacity: 0; }
+}
+@keyframes wobble {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.5px); }
+}
+@keyframes glow {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.8; }
+}
+@keyframes bubble-up {
+  0% { transform: translateY(0) scale(0.6); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateY(-110px) scale(1.1); opacity: 0; }
+}
+@keyframes flicker {
+  0%, 100% { transform: scaleY(1) skewX(0); }
+  25% { transform: scaleY(1.08) skewX(-3deg); }
+  50% { transform: scaleY(0.94) skewX(2deg); }
+  75% { transform: scaleY(1.05) skewX(-1deg); }
+}
+@keyframes face-glow {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 4px #ffb04d); }
+  45% { opacity: 0.75; filter: drop-shadow(0 0 1px #ffb04d); }
+  55% { opacity: 0.95; }
+}
+@keyframes flap {
+  from { transform: scaleY(1); }
+  to { transform: scaleY(0.35); }
+}
+
+/* ---------- flask logo ---------- */
+.al-b1 { animation: rise 2.4s ease-in infinite; }
+.al-b2 { animation: rise 2.9s ease-in 0.6s infinite; }
+.al-b3 { animation: rise 2.1s ease-in 1.1s infinite; }
+.al-b4 { animation: rise 3.2s ease-in 1.6s infinite; }
+.al-b5 { animation: rise 2.6s ease-in 0.3s infinite; }
+.al-surface { animation: wobble 1.8s ease-in-out infinite; }
+.al-glow { animation: glow 2.6s ease-in-out infinite; }
+
+/* ---------- bats ---------- */
+.bat-wings {
+  transform-origin: 32px 14px;
+  animation: flap 0.35s ease-in-out infinite alternate;
+}
+
+/* ---------- cauldron ---------- */
+.cd-fire-glow { animation: glow 1.2s ease-in-out infinite; }
+
+.cd-bubble {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bubble-up 3s ease-in infinite;
+  opacity: 0;
+}
+.cd-bubble.b2 { animation-delay: 0.5s; animation-duration: 2.6s; }
+.cd-bubble.b3 { animation-delay: 1.1s; animation-duration: 3.4s; }
+.cd-bubble.b4 { animation-delay: 1.6s; }
+.cd-bubble.b5 { animation-delay: 2.1s; animation-duration: 2.8s; }
+.cd-bubble.b6 { animation-delay: 2.5s; }
+
+.cd-flame {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: flicker 0.9s ease-in-out infinite;
+}
+.cd-flame.f2 { animation-duration: 0.7s; animation-delay: -0.2s; }
+.cd-flame.f3 { animation-duration: 1.1s; animation-delay: -0.4s; }
+
+.cd-emblem { filter: drop-shadow(0 0 10px rgba(255, 154, 61, 0.45)); }
+
+.pk-face { animation: face-glow 2.2s ease-in-out infinite; }
+
+/* ---------- graveyard ---------- */
+/* hand claws up out of the dirt, pauses, then sinks back a little */
+@keyframes zombie-rise {
+  0%, 100% { transform: translateY(26px) rotate(-3deg); }
+  40%, 70% { transform: translateY(0) rotate(3deg); }
+}
+@keyframes zombie-grasp {
+  0%, 100% { transform: rotate(-5deg) scaleY(1); }
+  50% { transform: rotate(5deg) scaleY(0.9); }
+}
+/* fixed pivots in the hand's local units (0,0 = where the arm meets the dirt,
+   0,-72 = top of the palm) so the wiggling fingers can't shift the pivot */
+.zh-rise {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  animation: zombie-rise 5s ease-in-out infinite;
+}
+.zh-fingers {
+  transform-box: view-box;
+  transform-origin: 0 -72px;
+  animation: zombie-grasp 1.3s ease-in-out infinite;
+}
+.gy-mist { animation: glow 6s ease-in-out infinite; }
+
+/* ---------- brewing (isLoading) ---------- */
+/* the ladle's stirring path is computed per frame in Ladle.tsx */
+@keyframes swirl {
+  to { transform: rotate(360deg); }
+}
+@keyframes ripple {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(1.5); }
+}
+@keyframes vortex {
+  0%, 100% { transform: scale(0.8); opacity: 0.7; }
+  50% { transform: scale(1.2); opacity: 0.95; }
+}
+@keyframes splash {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 1; }
+  45% { transform: translate(calc(var(--dx) * 0.6), -42px); }
+  100% { transform: translate(var(--dx), 6px); opacity: 0; }
+}
+@keyframes rock {
+  from { transform: rotate(-1.4deg); }
+  to { transform: rotate(1.4deg); }
+}
+
+.cd-swirl { animation: swirl 1.2s linear infinite; }
+.cd-vortex {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: vortex 1.2s ease-in-out infinite;
+}
+.cd-ripple {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ripple 0.6s ease-in-out infinite;
+}
+.cd-splash {
+  opacity: 0;
+  animation: splash 0.9s ease-out infinite;
+}
+.cd-splash.s2 { animation-delay: 0.22s; }
+.cd-splash.s3 { animation-delay: 0.45s; }
+.cd-splash.s4 { animation-delay: 0.67s; }
+
+/* Fixed pivot (bottom-centre of the pot, in viewBox units). Don't use fill-box
+   here: the moving ladle/splashes change the group's bbox every frame, which
+   makes the pivot jump and the whole pot jitter. */
+.is-brewing .cd-pot {
+  transform-box: view-box;
+  transform-origin: 200px 296px;
+  animation: rock 0.45s ease-in-out infinite alternate;
+}
+.is-brewing .al-glow { animation-duration: 0.9s; }
+.is-brewing .al-surface { animation-duration: 0.6s; }
+.is-brewing .cd-bubble { animation-duration: 1.4s; }
+.is-brewing .cd-fire-glow { animation-duration: 0.5s; }
+.is-brewing .cd-flame { animation-duration: 0.45s; }
+
+/* ---------- reduced motion (also covers Tailwind animate-* utilities) ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .cd-bubble {
+    opacity: 0.7;
+  }
+}
