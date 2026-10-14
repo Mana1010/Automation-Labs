@@ -6,7 +6,7 @@ type Store = {
 };
 
 const store = (set: StoreApi<Store>["setState"]) => ({
-  isAutomating: false,
+  isAutomating: true,
   toggleIsAutomating: () =>
     set((state) => ({ isAutomating: !state.isAutomating })),
 });

@@ -1,6 +1,13 @@
-import { SalesInvoice } from "./../types/determine_AJE_issue";
+import {
+  GLEntry,
+  JournalEntry,
+  SalesInvoice,
+} from "./../types/determine_AJE_issue";
 import axios from "axios";
 import type { Request, Response } from "express";
+import { checkAJEDiscrepancy } from "../utils/checkAJEDiscrepancy";
+import { getAJERelation } from "../utils/getAJERelations";
+
 async function addLarkSheet() {
   await axios.post(
     `https://open.larksuite.com/open-apis/sheets/v2/spreadsheets/${process.env.SHEET_ID}/values_append?insertDataOption=INSERT_ROWS`,
@@ -15,54 +22,113 @@ async function addLarkSheet() {
     { headers: { Authorization: `Bearer ${process.env.TENANT_ACCESS_TOKEN}` } },
   );
 }
-async function getSalesInvoice(secret: string, key: string) {
-  try {
-    const fetchData = await axios.get(`${process.env.LLIB_URL}/Sales Invoice`, {
-      headers: { Authorization: `token ${key}:${secret}` },
-      params: {
-        limit_page_length: 0,
-        filters: JSON.stringify([
-          ["posting_date", "<=", "2026-02-01"],
-          ["name", "like", "%SOA-%"],
-        ]),
-        fields: JSON.stringify([
-          "name",
-          "grand_total",
-          "adjustment_journal_entry",
-        ]),
-      },
-    });
-    const response = fetchData.data?.data as SalesInvoice[];
-    console.log(response);
-  } catch (err) {
-    console.log(err);
-  }
-}
 
-// async function getJournalEntry() {
-//   try {
-//     const fetchData = await axios.get(`${process.env.LLIB_URL}/Journal Entry`, {
-//       headers: { Authorization: `token cd6d750e4a971d2:1c0554712b80f3d` },
-//       params: {
-//         limit_page_length: 0,
-//         filters: JSON.stringify([
-//           ["posting_date", "<=", "2026-02-01"],
-//           ["name", "like", "%SOA-%"],
-//         ]),
-//         fields: JSON.stringify([
-//           "name",
-//           "grand_total",
-//           "adjustment_journal_entry",
-//         ]),
-//       },
-//     });
-//     const response = fetchData.data?.data as SalesInvoice[];
-//     console.log(response);
-//   } catch (err) {
-//     console.log(err);
-//   }
-// }
-export default function determineAJEIssue(req: Request, res: Response) {
-  const { apiSecret, apiKey, urlDomain } = req.body();
-  getSalesInvoice(apiKey, apiSecret);
+export default async function determineAJEIssue(req: Request, res: Response) {
+  const { apiSecret, apiKey, urlDomain } = req.body;
+  // SOA
+  //   SOA (USD)
+  // SOA (PHP)
+  // SOA (Conversion Rate)
+  // Adjustment Journal Entry
+  // Total Debit & Credit In Table
+  // Conversion Rate on Table
+  // Total Debit & Credit
+  let larkSheetPayload = [] as any[];
+
+  try {
+    const [siRes, jeRes, glRes] = await Promise.all([
+      axios.get<{ data: SalesInvoice[] }>(
+        `${urlDomain}/api/resource/Sales Invoice`,
+        {
+          headers: { Authorization: `token ${apiKey}:${apiSecret}` },
+          params: {
+            limit_page_length: 0,
+            filters: JSON.stringify([
+              ["posting_date", "<=", "2026-02-01"],
+              ["name", "like", "%SOA-%"],
+              ["party_account_currency", "=", "USD"],
+            ]),
+            fields: JSON.stringify([
+              "name",
+              "grand_total",
+              "conversion_rate",
+              "adjustment_journal_entry",
+            ]),
+          },
+        },
+      ),
+      axios.get<{ data: JournalEntry[] }>(
+        `${urlDomain}/api/resource/Journal Entry`,
+        {
+          headers: { Authorization: `token ${apiKey}:${apiSecret}` },
+          params: {
+            limit_page_length: 0,
+            filters: JSON.stringify([["posting_date", "<=", "2026-03-01"]]),
+            fields: JSON.stringify([
+              "name",
+              "total_debit",
+              "total_credit",
+              "parent_sales_invoice",
+              "`tabJournal Entry Account`.name AS jea_name",
+              "`tabJournal Entry Account`.exchange_rate AS jea_rate",
+              "`tabJournal Entry Account`.debit_in_account_currency AS jea_debit_in_currency",
+              "`tabJournal Entry Account`.credit_in_account_currency AS jea_credit_in_currency",
+              "`tabJournal Entry Account`.credit AS jea_credit",
+              "`tabJournal Entry Account`.debit AS jea_debit",
+            ]),
+          },
+        },
+      ),
+
+      axios.get<{ data: GLEntry[] }>(`${urlDomain}/api/resource/GL Entry`, {
+        headers: { Authorization: `token ${apiKey}:${apiSecret}` },
+        params: {
+          limit_page_length: 0,
+          filters: JSON.stringify([["posting_date", "<=", "2026-03-01"]]),
+          fields: JSON.stringify([
+            "name",
+            "debit",
+            "credit",
+            "voucher_no",
+            "debit_in_account_currency",
+            "credit_in_account_currency",
+          ]),
+        },
+      }),
+    ]);
+    const getSi = siRes?.data.data;
+    const getJe = jeRes?.data.data;
+    const getGL = glRes?.data.data;
+    if (getSi.length <= 0 && getJe.length <= 0 && getGL.length <= 0) return;
+
+    for (let i = 0; i < getSi.length; i++) {
+      const siData = getSi[i] as SalesInvoice;
+
+      const [glEntriesRelated, jeEntriesRelated] = getAJERelation(
+        siData?.name,
+        getJe,
+        getGL,
+      );
+
+      //This is where you check and formulate a description and code after checking for any discrepancies
+      const isAJEHasDiscrepancy = checkAJEDiscrepancy(
+        siData,
+        jeEntriesRelated,
+        glEntriesRelated,
+        larkSheetPayload,
+      );
+
+      const isAJECorrect = !isAJEHasDiscrepancy?.length;
+      if (isAJECorrect) {
+        continue;
+      }
+    }
+    console.log(larkSheetPayload);
+    res.json({
+      data: larkSheetPayload,
+    });
+  } catch (err) {
+    res.json({ data: JSON.stringify(err?.response?.data) });
+    console.log("Something went wrong");
+  }
 }
