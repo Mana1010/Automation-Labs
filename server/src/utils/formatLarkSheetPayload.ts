@@ -40,6 +40,9 @@ export function formatLarkSheetPayload(
       totalDebitAndCredit: item.total_credit || item.total_debit,
     };
   }
-  larkSheetPayload.push([shapeData]);
+
+  const plainArr = Object.values(shapeData);
+  console.log(plainArr);
+  larkSheetPayload.push([plainArr]);
   return;
 }

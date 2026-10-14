@@ -3,28 +3,16 @@ import {
   JournalEntry,
   SalesInvoice,
 } from "./../types/determine_AJE_issue";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import type { Request, Response } from "express";
 import { checkAJEDiscrepancy } from "../utils/checkAJEDiscrepancy";
 import { getAJERelation } from "../utils/getAJERelations";
-
-async function addLarkSheet() {
-  await axios.post(
-    `https://open.larksuite.com/open-apis/sheets/v2/spreadsheets/${process.env.SHEET_ID}/values_append?insertDataOption=INSERT_ROWS`,
-    {
-      // The range only says which sheet and columns (A to D here).
-      // Lark finds the first empty row after your existing data by itself.
-      valueRange: {
-        range: `bc1a69!A1:D1`,
-        values: [["SOA-RET-2025-145349", 1870.5, "ACC-JV-2025-002892", "Paid"]],
-      },
-    },
-    { headers: { Authorization: `Bearer ${process.env.TENANT_ACCESS_TOKEN}` } },
-  );
-}
+import { addInGoogleSheet } from "../api/google-sheet";
+import { Axios } from "axios";
 
 export default async function determineAJEIssue(req: Request, res: Response) {
-  const { apiSecret, apiKey, urlDomain } = req.body;
+  const { apiSecret, apiKey, urlDomain, sheetId } = req.body;
+
   // SOA
   //   SOA (USD)
   // SOA (PHP)
@@ -33,7 +21,7 @@ export default async function determineAJEIssue(req: Request, res: Response) {
   // Total Debit & Credit In Table
   // Conversion Rate on Table
   // Total Debit & Credit
-  let larkSheetPayload = [] as any[];
+  let googleSheetPayload = [] as any[];
 
   try {
     const [siRes, jeRes, glRes] = await Promise.all([
@@ -115,7 +103,7 @@ export default async function determineAJEIssue(req: Request, res: Response) {
         siData,
         jeEntriesRelated,
         glEntriesRelated,
-        larkSheetPayload,
+        googleSheetPayload,
       );
 
       const isAJECorrect = !isAJEHasDiscrepancy?.length;
@@ -123,12 +111,13 @@ export default async function determineAJEIssue(req: Request, res: Response) {
         continue;
       }
     }
-    console.log(larkSheetPayload);
+
+    console.log(googleSheetPayload[0]);
+    addInGoogleSheet(sheetId, googleSheetPayload.flat(1));
     res.json({
-      data: larkSheetPayload,
+      data: googleSheetPayload,
     });
-  } catch (err) {
-    res.json({ data: JSON.stringify(err?.response?.data) });
-    console.log("Something went wrong");
+  } catch (err: Axios.AxiosError<{ message: string }>) {
+    // res.json({ data: "Lol" || JSON.stringify(err?.response?.data) });
   }
 }

@@ -7,7 +7,11 @@ const app = express();
 const server = http.createServer(app);
 
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: "*",
+  }),
+);
 app.post("/automation/aje-issue", determineAJEIssue);
 server.listen(5000, () => {
   console.log("Server is running on port 5000");

@@ -13,7 +13,7 @@ const strongCls = "font-semibold text-ink";
 
 function Step({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex size-[22px] items-center justify-center rounded-md bg-ember font-mono text-xs text-pumpkin shadow-[0_0_10px_rgba(255,154,61,0.25)]">
+    <span className="inline-flex size-5.5 items-center justify-center rounded-md bg-ember font-mono text-xs text-pumpkin shadow-[0_0_10px_rgba(255,154,61,0.25)]">
       {children}
     </span>
   );
@@ -21,8 +21,8 @@ function Step({ children }: { children: ReactNode }) {
 
 function BrewForm() {
   const [data, setData] = useState({
-    larkSheetId: "",
-    domainURL: "",
+    sheetId: "",
+    urlDomain: "",
     apiKey: "",
     apiSecret: "",
   });
@@ -41,7 +41,7 @@ function BrewForm() {
     e.preventDefault();
     try {
       const getData = axios.post(
-        `http://localhost:8000/automations/aje-issue`,
+        `http://localhost:5000/automation/aje-issue`,
         data,
         {
           headers: {
@@ -70,29 +70,29 @@ function BrewForm() {
 
       <div className={fieldCls}>
         <label htmlFor="al-sheet" className={labelCls}>
-          <Step>1</Step>Lark Sheet ID
+          <Step>1</Step>Google Sheet ID
         </label>
         <input
           id="al-sheet"
           type="text"
-          name="larkSheetId"
+          name="sheetId"
           onChange={handleChange}
-          placeholder="e.g. Xk9sTq2LmPa7RbVz"
+          placeholder="e.g. 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
           className={inputCls}
         />
         <div className="flex flex-col gap-2 rounded-xl bg-card-2 px-3.5 py-3 text-[13px] leading-normal text-hint short:gap-1 short:px-3 short:py-2">
           <span>
             <strong className={strongCls}>Where to find it:</strong> open the
-            sheet in Lark and copy its URL. The ID is the part right after{" "}
-            <code className="font-mono text-pumpkin-light">/sheets/</code>,
-            before any <code className="font-mono text-pumpkin-light">?</code>
+            sheet in Google Sheets and copy its URL. The ID is the part right
+            after <code className="font-mono text-pumpkin-light">/d/</code>,
+            before <code className="font-mono text-pumpkin-light">/edit</code>
           </span>
           <code className="font-mono text-xs break-all text-mist">
-            https://yourteam.larksuite.com/sheets/
+            https://docs.google.com/spreadsheets/d/
             <mark className="rounded bg-moss px-1 py-px text-slime-light">
-              Xk9sTq2LmPa7RbVz
+              1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms
             </mark>
-            ?sheet=0a1b2c
+            /edit#gid=0
           </code>
         </div>
       </div>
@@ -103,7 +103,7 @@ function BrewForm() {
         </label>
         <input
           id="al-domain"
-          name="domainURL"
+          name="urlDomain"
           onChange={handleChange}
           type="url"
           placeholder="https://yourcompany.erpnext.com"
@@ -149,7 +149,7 @@ function BrewForm() {
 
       <button
         type="submit"
-        className="flex h-[52px] flex-none cursor-pointer items-center justify-center gap-2.5 rounded-[14px] border-none bg-linear-to-b from-slime-light to-slime font-heading text-lg font-extrabold tracking-[0.01em] text-[#0d1a08] shadow-[0_10px_30px_-10px_rgba(124,227,90,0.55)] transition duration-150 hover:-translate-y-px hover:shadow-[0_14px_36px_-8px_rgba(124,227,90,0.75)] active:translate-y-px short:h-[46px]"
+        className="flex h-13 flex-none cursor-pointer items-center justify-center gap-2.5 rounded-[14px] border-none bg-linear-to-b from-slime-light to-slime font-heading text-lg font-extrabold tracking-[0.01em] text-[#0d1a08] shadow-[0_10px_30px_-10px_rgba(124,227,90,0.55)] transition duration-150 hover:-translate-y-px hover:shadow-[0_14px_36px_-8px_rgba(124,227,90,0.75)] active:translate-y-px short:h-[46px]"
       >
         <svg
           width="20"
