@@ -9,6 +9,7 @@ import { checkAJEDiscrepancy } from "../utils/checkAJEDiscrepancy";
 import { getAJERelation } from "../utils/getAJERelations";
 import { addInGoogleSheet } from "../api/google-sheet";
 import { Axios } from "axios";
+import { Axios } from "axios";
 
 export default async function determineAJEIssue(req: Request, res: Response) {
   const { apiSecret, apiKey, urlDomain, sheetId } = req.body;
@@ -112,12 +113,13 @@ export default async function determineAJEIssue(req: Request, res: Response) {
       }
     }
 
-    console.log(googleSheetPayload[0]);
-    addInGoogleSheet(sheetId, googleSheetPayload.flat(1));
-    res.json({
+    addInGoogleSheet(sheetId, googleSheetPayload);
+    res.status(200).json({
       data: googleSheetPayload,
     });
-  } catch (err: Axios.AxiosError<{ message: string }>) {
-    // res.json({ data: "Lol" || JSON.stringify(err?.response?.data) });
+  } catch (err: Axios<{ message: string }>) {
+    if (err instanceof AxiosError) {
+      res.status(500).json({ data: err?.response?.data });
+    }
   }
 }

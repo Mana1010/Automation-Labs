@@ -5,6 +5,7 @@ import {
   type ReactNode,
 } from "react";
 import axios from "axios";
+import { useAppStore } from "../store/app.store";
 const fieldCls = "flex min-w-0 flex-col gap-2";
 const labelCls = "flex items-center gap-2.5 text-sm font-semibold text-ink";
 const inputCls =
@@ -20,6 +21,7 @@ function Step({ children }: { children: ReactNode }) {
 }
 
 function BrewForm() {
+  const { setIsAutomating } = useAppStore();
   const [data, setData] = useState({
     sheetId: "",
     urlDomain: "",
@@ -40,7 +42,8 @@ function BrewForm() {
   async function automateForm(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     try {
-      const getData = axios.post(
+      setIsAutomating(true);
+      const getData = await axios.post(
         `http://localhost:5000/automation/aje-issue`,
         data,
         {
@@ -52,6 +55,8 @@ function BrewForm() {
       return getData;
     } catch (err) {
       console.log(err);
+    } finally {
+      setIsAutomating(false);
     }
   }
   return (

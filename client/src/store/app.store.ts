@@ -2,13 +2,12 @@ import { create, type StoreApi } from "zustand";
 
 type Store = {
   isAutomating: boolean;
-  toggleIsAutomating: () => void;
+  setIsAutomating: (val: boolean) => void;
 };
 
 const store = (set: StoreApi<Store>["setState"]) => ({
-  isAutomating: true,
-  toggleIsAutomating: () =>
-    set((state) => ({ isAutomating: !state.isAutomating })),
+  isAutomating: false,
+  setIsAutomating: (val: boolean) => set({ isAutomating: val }),
 });
 
 export const useAppStore = create<Store>(store);

@@ -1,3 +1,4 @@
+import { formatNumbers } from "../api/format-numbers";
 import {
   GLEntry,
   JournalEntry,
@@ -18,31 +19,31 @@ export function formatLarkSheetPayload(
   je: JournalEntry[],
   gl: GLEntry[],
 ) {
-  let shapeData = {
-    soaId: si.name,
-    soaUSD: si.grand_total,
-    soaPHP: Math.abs(si.grand_total) * si.conversion_rate,
-    journalEntry: "",
-    totalDebitAndCreditJea: 0,
-    conversionRate: si.conversion_rate,
-    totalDebitAndCredit: 0,
-  };
+  const rows = [] as unknown[][];
 
   const isAbove2JEA = je.length > 2 && gl.length > 2;
 
   if (isAbove2JEA) return;
 
+  //Will update this.....
+  const seen = new Set(rows.map((r) => r[3]));
   for (const item of je) {
-    shapeData = {
-      ...shapeData,
-      journalEntry: item.name,
-      totalDebitAndCreditJea: (item.jea_credit || item.jea_debit) ?? 0,
-      totalDebitAndCredit: item.total_credit || item.total_debit,
-    };
+    const totalDebitAndCreditJea =
+      (item.jea_credit_in_currency || item.jea_debit_in_currency) ?? 0;
+    const totalDebitAndCredit = item.total_credit || item.total_debit;
+    // const checkDuplicateJE = rows.some((r) => r[3] === item.name);
+    if (seen.has(item.name)) continue;
+    seen.add(item.name);
+    rows.push([
+      si.name,
+      formatNumbers("en-US", si.grand_total),
+      formatNumbers("en-PH", Math.abs(si.grand_total) * si.conversion_rate),
+      si.conversion_rate,
+      item.name,
+      formatNumbers("en-US", totalDebitAndCreditJea),
+      formatNumbers("en-PH", totalDebitAndCredit),
+    ]);
   }
-
-  const plainArr = Object.values(shapeData);
-  console.log(plainArr);
-  larkSheetPayload.push([plainArr]);
+  larkSheetPayload.push(...rows);
   return;
 }

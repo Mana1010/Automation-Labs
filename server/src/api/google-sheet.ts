@@ -9,7 +9,6 @@ export async function addInGoogleSheet(
   sheetId: string,
   sheetRows: unknown[][],
 ) {
-  console.log(key);
   const auth = new google.auth.GoogleAuth({
     credentials: key,
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
