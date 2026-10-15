@@ -39,6 +39,28 @@
   --animate-dangle: dangle 4s ease-in-out infinite;
   --animate-fog: fog 18s ease-in-out infinite alternate;
   --animate-wisp: wisp 3.6s ease-in infinite;
+  --animate-shimmer: shimmer 1.4s ease-in-out infinite;
+  --animate-smoke-rise: smoke-rise 1.2s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  --animate-smoke-drift: smoke-drift 6s ease-in-out infinite alternate;
+  --animate-result-in: result-in 0.7s 0.45s ease-out both;
+
+  @keyframes shimmer {
+    from { transform: translateX(0); }
+    to { transform: translateX(400%); }
+  }
+  @keyframes smoke-rise {
+    0% { opacity: 0; transform: translateY(70px) scale(0.4); filter: blur(10px); }
+    60% { opacity: 1; filter: blur(2px); }
+    100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  }
+  @keyframes smoke-drift {
+    from { transform: translate(-50%, -50%) scale(0.92); }
+    to { transform: translate(calc(-50% + 14px), calc(-50% - 10px)) scale(1.08); }
+  }
+  @keyframes result-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.9); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
 
   @keyframes tagline-in {
     from { opacity: 0; transform: translateY(4px); }

@@ -21,6 +21,12 @@
   scrollbar-color: var(--color-line-2) transparent;
 }
 
+/* "Brewing..." dots on the Automate button */
+@keyframes dot {
+  0%, 20% { opacity: 0; }
+  40%, 100% { opacity: 1; }
+}
+
 /* ---------- svg keyframes ---------- */
 @keyframes rise {
   0% { transform: translateY(0); opacity: 0; }
@@ -97,6 +103,29 @@
 .cd-emblem { filter: drop-shadow(0 0 10px rgba(255, 154, 61, 0.45)); }
 
 .pk-face { animation: face-glow 2.2s ease-in-out infinite; }
+
+/* ---------- failed run (isFailed, ~3s) ---------- */
+@keyframes fail-shake {
+  0%, 100% { transform: rotate(0); }
+  15% { transform: rotate(-3deg); }
+  30% { transform: rotate(3deg); }
+  45% { transform: rotate(-2deg); }
+  60% { transform: rotate(2deg); }
+  75% { transform: rotate(-1deg); }
+}
+@keyframes fail-glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+/* green brew → red via the #cd-red SVG filter; pumpkin emblem + fire untouched */
+.is-failed .cd-brew-fx { filter: url(#cd-red); }
+.is-failed .cd-pot {
+  transform-box: view-box;
+  transform-origin: 200px 296px;
+  animation: fail-shake 0.6s ease-in-out 2;
+}
+.is-failed .al-glow { animation: fail-glow 0.5s ease-in-out infinite; }
+.is-failed .cd-bubble { animation-duration: 1s; }
 
 /* ---------- graveyard ---------- */
 /* hand claws up out of the dirt, pauses, then sinks back a little */

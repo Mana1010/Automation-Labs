@@ -21,7 +21,7 @@ function Step({ children }: { children: ReactNode }) {
 }
 
 function BrewForm() {
-  const { setIsAutomating } = useAppStore();
+  const { isAutomating, setIsAutomating, setResult, failBrew } = useAppStore();
   const [data, setData] = useState({
     sheetId: "",
     urlDomain: "",
@@ -41,10 +41,12 @@ function BrewForm() {
   }
   async function automateForm(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (isAutomating) return; // ignore double submits while brewing
     try {
       setIsAutomating(true);
+      setResult(null);
       const getData = await axios.post(
-        `http://localhost:5000/automation/aje-issue`,
+        `https://automation-labs.onrender.com/automation/aje-issue`,
         data,
         {
           headers: {
@@ -52,9 +54,16 @@ function BrewForm() {
           },
         },
       );
+
+      // PLACEHOLDER — map this from getData.data once the backend response is final
+      setResult({
+        value: getData.data?.data || 0,
+        label: "Total Journal Entry that has Discrepancies",
+      });
       return getData;
     } catch (err) {
       console.log(err);
+      failBrew(); // cauldron turns red for 3 seconds
     } finally {
       setIsAutomating(false);
     }
@@ -154,22 +163,65 @@ function BrewForm() {
 
       <button
         type="submit"
-        className="flex h-13 flex-none cursor-pointer items-center justify-center gap-2.5 rounded-[14px] border-none bg-linear-to-b from-slime-light to-slime font-heading text-lg font-extrabold tracking-[0.01em] text-[#0d1a08] shadow-[0_10px_30px_-10px_rgba(124,227,90,0.55)] transition duration-150 hover:-translate-y-px hover:shadow-[0_14px_36px_-8px_rgba(124,227,90,0.75)] active:translate-y-px short:h-[46px]"
+        disabled={isAutomating}
+        aria-busy={isAutomating}
+        className="relative flex h-13 flex-none cursor-pointer items-center justify-center gap-2.5 overflow-hidden rounded-[14px] border-none bg-linear-to-b from-slime-light to-slime font-heading text-lg font-extrabold tracking-[0.01em] text-[#0d1a08] shadow-[0_10px_30px_-10px_rgba(124,227,90,0.55)] transition duration-150 enabled:hover:-translate-y-px enabled:hover:shadow-[0_14px_36px_-8px_rgba(124,227,90,0.75)] enabled:active:translate-y-px disabled:cursor-wait disabled:from-slime/80 disabled:to-[#4FB83A] short:h-[46px]"
       >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M13 2 4 14h7l-1 8 9-12h-7z" />
-        </svg>
-        Automate
+        {isAutomating ? (
+          <>
+            {/* light sweep across the button while brewing */}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 animate-shimmer bg-linear-to-r from-transparent via-white/45 to-transparent"
+            />
+            <svg
+              className="size-5 animate-spin"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="9"
+                stroke="currentColor"
+                strokeOpacity=".25"
+                strokeWidth="3"
+              />
+              <path
+                d="M21 12a9 9 0 0 0-9-9"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+            </svg>
+            <span>
+              Brewing
+              <span className="inline-flex w-5 justify-start">
+                <span className="animate-[dot_1.2s_infinite]">.</span>
+                <span className="animate-[dot_1.2s_0.2s_infinite]">.</span>
+                <span className="animate-[dot_1.2s_0.4s_infinite]">.</span>
+              </span>
+            </span>
+          </>
+        ) : (
+          <>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M13 2 4 14h7l-1 8 9-12h-7z" />
+            </svg>
+            Automate
+          </>
+        )}
       </button>
     </form>
   );

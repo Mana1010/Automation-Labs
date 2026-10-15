@@ -12,6 +12,7 @@ export function checkAJEDiscrepancy(
   gl: GLEntry[] | undefined,
   larkSheetPayload: any[],
 ) {
+  console.log("GL Count", je?.length);
   if (!je || !gl) return;
   let sentences = [] as SentenceList[];
   const grandSoaUSD = Math.abs(si?.grand_total ?? 0);

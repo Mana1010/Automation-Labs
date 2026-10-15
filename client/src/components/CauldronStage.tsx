@@ -1,15 +1,23 @@
 import { useAppStore } from "../store/app.store";
 import Cauldron from "./Cauldron";
 import Graveyard from "./Graveyard";
+import MagicSmoke from "./MagicSmoke";
 import Pumpkin from "./Pumpkin";
 
 const wispCls =
-  "absolute bottom-0 size-[26px] animate-wisp rounded-full bg-slime-light/35 blur-[6px]";
+  "absolute bottom-0 animate-wisp rounded-full blur-[6px] transition-all duration-700";
 const pumpkinCls =
   "absolute bottom-0 z-2 h-auto drop-shadow-[0_8px_20px_rgba(255,122,26,0.35)]";
 
+const slotBase =
+  "relative z-2 flex min-h-[140px] w-full max-w-[520px] flex-[0_1_auto] flex-col items-center justify-center gap-1.5 rounded-3xl p-5 text-center text-sm short:min-h-[110px]";
+const slotIdle =
+  "border-2 border-dashed border-slime/45 bg-[radial-gradient(ellipse_at_50%_100%,rgba(124,227,90,0.14),rgba(13,9,19,0.5)_70%)] text-mist";
+const slotFailed =
+  "border-2 border-dashed border-red-500/55 bg-[radial-gradient(ellipse_at_50%_100%,rgba(239,68,68,0.16),rgba(13,9,19,0.5)_70%)] text-red-300";
+
 function CauldronStage() {
-  const { isAutomating } = useAppStore();
+  const { isAutomating, result, isFailed } = useAppStore();
   return (
     <section
       className="relative flex min-w-0 flex-none flex-col items-center justify-end overflow-x-clip px-4 pt-2 desk:min-h-0 desk:flex-[1_1_480px]"
@@ -17,23 +25,49 @@ function CauldronStage() {
       aria-busy={isAutomating}
     >
       {/*
-        RESULT PLACEHOLDER — the brew output goes here, right above the cauldron.
-        Replace the contents of #brew-result with your own result UI.
+        RESULT SLOT — sits right above the cauldron.
+        success → MagicSmoke rises with the result (set via setResult in BrewForm)
+        failed  → red message for 3s while the cauldron turns red
+        idle    → placeholder
       */}
       <div
         id="brew-result"
-        className="relative z-2 flex min-h-[140px] w-full max-w-[520px] flex-[0_1_auto] flex-col items-center justify-center gap-1.5 rounded-3xl border-2 border-dashed border-slime/45 bg-[radial-gradient(ellipse_at_50%_100%,rgba(124,227,90,0.14),rgba(13,9,19,0.5)_70%)] p-5 text-center text-sm text-mist short:min-h-[110px]"
+        aria-live="polite"
+        className={`${slotBase} ${result ? "" : isFailed ? slotFailed : slotIdle}`}
       >
-        <span className="font-mono text-[11px] tracking-[0.12em] text-slime uppercase">
-          Result placeholder
-        </span>
-        <p className="m-0">Your brew will rise here…</p>
+        {result ? (
+          <MagicSmoke key={`${result.value}-${result.label}`} {...result} />
+        ) : isFailed ? (
+          <>
+            <span className="font-mono text-[11px] tracking-[0.12em] text-red-400 uppercase">
+              The brew went wrong
+            </span>
+            <p className="m-0">Check your ingredients and try again.</p>
+          </>
+        ) : (
+          <>
+            <span className="font-mono text-[11px] tracking-[0.12em] text-slime uppercase">
+              Result placeholder
+            </span>
+            <p className="m-0">
+              {isAutomating ? "Stirring the brew…" : "Your brew will rise here…"}
+            </p>
+          </>
+        )}
       </div>
 
+      {/* vapor between pot and result — thicker and purple once a result rises */}
       <div className="relative h-10 w-[200px] flex-none" aria-hidden="true">
-        <span className={`${wispCls} left-10`} />
-        <span className={`${wispCls} left-[90px] [animation-delay:1.2s]`} />
-        <span className={`${wispCls} left-[140px] [animation-delay:2.4s]`} />
+        {[
+          "left-10",
+          "left-[90px] [animation-delay:1.2s]",
+          "left-[140px] [animation-delay:2.4s]",
+        ].map((pos) => (
+          <span
+            key={pos}
+            className={`${wispCls} ${pos} ${result ? "size-[38px] bg-[#B37BFF]/40" : "size-[26px] bg-slime-light/35"}`}
+          />
+        ))}
       </div>
 
       <div className="relative flex w-full max-w-[560px] flex-none items-end justify-center desk:max-h-[420px] desk:min-h-[220px] desk:flex-[1_1_0]">

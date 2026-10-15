@@ -2,10 +2,10 @@ import { useAppStore } from "../store/app.store";
 import Ladle from "./Ladle";
 
 function Cauldron() {
-  const { isAutomating } = useAppStore();
+  const { isAutomating, isFailed } = useAppStore();
   return (
     <svg
-      className={`relative z-1 h-auto w-[72%] overflow-visible desk:h-full desk:w-auto desk:max-w-[72%]${isAutomating ? " is-brewing" : ""}`}
+      className={`relative z-1 h-auto w-[72%] overflow-visible desk:h-full desk:w-auto desk:max-w-[72%]${isAutomating ? " is-brewing" : ""}${isFailed ? " is-failed" : ""}`}
       viewBox="0 0 400 370"
       aria-hidden="true"
     >
@@ -28,6 +28,11 @@ function Cauldron() {
           <stop offset="45%" stopColor="#7CE35A" />
           <stop offset="100%" stopColor="#3E9A2C" />
         </radialGradient>
+        {/* failed run: shifts the green brew to red (applied via .is-failed .cd-brew-fx) */}
+        <filter id="cd-red" colorInterpolationFilters="sRGB">
+          <feColorMatrix type="hueRotate" values="-105" />
+          <feColorMatrix type="saturate" values="1.6" />
+        </filter>
         <clipPath id="cd-mouth">
           <ellipse cx="200" cy="112" rx="138" ry="26" />
         </clipPath>
@@ -35,7 +40,7 @@ function Cauldron() {
 
       {/* glows */}
       <ellipse
-        className="al-glow"
+        className="al-glow cd-brew-fx"
         cx="200"
         cy="100"
         rx="190"
@@ -148,8 +153,8 @@ function Cauldron() {
         </g>
 
         {/* brew surface */}
-        <ellipse cx="200" cy="112" rx="138" ry="26" fill="#1F3318" />
-        <g clipPath="url(#cd-mouth)">
+        <ellipse className="cd-brew-fx" cx="200" cy="112" rx="138" ry="26" fill="#1F3318" />
+        <g className="cd-brew-fx" clipPath="url(#cd-mouth)">
           <g className="al-surface">
             <ellipse cx="200" cy="116" rx="140" ry="24" fill="url(#cd-brew)" />
             <circle
@@ -233,12 +238,14 @@ function Cauldron() {
 
         {/* slime drips over the front lip */}
         <path
+          className="cd-brew-fx"
           d="M120 136 C122 150 118 160 124 166 C130 160 126 150 132 139 Z M248 140 C250 158 246 172 253 178 C260 172 256 156 260 139 Z M300 128 C302 138 300 146 305 150 C310 146 307 136 310 126 Z"
           fill="#7CE35A"
         />
       </g>
 
       {/* bubbles escaping upward (toward the result slot) */}
+      <g className="cd-brew-fx">
       <circle className="cd-bubble b1" cx="150" cy="100" r="7" fill="#C6FFAE" />
       <circle className="cd-bubble b2" cx="210" cy="96" r="5" fill="#9DF27A" />
       <circle
@@ -253,6 +260,7 @@ function Cauldron() {
       <circle className="cd-bubble b4" cx="180" cy="98" r="4" fill="#E7FFD9" />
       <circle className="cd-bubble b5" cx="270" cy="100" r="5" fill="#9DF27A" />
       <circle className="cd-bubble b6" cx="125" cy="104" r="4" fill="#E7FFD9" />
+      </g>
     </svg>
   );
 }

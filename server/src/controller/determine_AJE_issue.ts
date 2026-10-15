@@ -110,10 +110,11 @@ export default async function determineAJEIssue(req: Request, res: Response) {
         continue;
       }
     }
-
+    const totalDiscrepancies = googleSheetPayload.length;
+    console.log(totalDiscrepancies);
     addInGoogleSheet(sheetId, googleSheetPayload);
     res.status(200).json({
-      data: googleSheetPayload,
+      data: totalDiscrepancies,
     });
   } catch (err: unknown) {
     if (err instanceof AxiosError) {

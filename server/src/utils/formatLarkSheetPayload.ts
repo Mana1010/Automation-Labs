@@ -41,6 +41,7 @@ export function formatLarkSheetPayload(
       si.conversion_rate,
       item.name,
       formatNumbers("en-US", totalDebitAndCreditJea),
+      item.jea_rate,
       formatNumbers("en-PH", totalDebitAndCredit),
     ]);
   }
