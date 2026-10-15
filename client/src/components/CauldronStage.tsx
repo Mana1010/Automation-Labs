@@ -11,8 +11,6 @@ const pumpkinCls =
 
 const slotBase =
   "relative z-2 flex min-h-[140px] w-full max-w-[520px] flex-[0_1_auto] flex-col items-center justify-center gap-1.5 rounded-3xl p-5 text-center text-sm short:min-h-[110px]";
-const slotIdle =
-  "border-2 border-dashed border-slime/45 bg-[radial-gradient(ellipse_at_50%_100%,rgba(124,227,90,0.14),rgba(13,9,19,0.5)_70%)] text-mist";
 const slotFailed =
   "border-2 border-dashed border-red-500/55 bg-[radial-gradient(ellipse_at_50%_100%,rgba(239,68,68,0.16),rgba(13,9,19,0.5)_70%)] text-red-300";
 
@@ -33,7 +31,7 @@ function CauldronStage() {
       <div
         id="brew-result"
         aria-live="polite"
-        className={`${slotBase} ${result ? "" : isFailed ? slotFailed : slotIdle}`}
+        className={`${slotBase} ${result ? "" : isFailed ? slotFailed : ""}`}
       >
         {result ? (
           <MagicSmoke key={`${result.value}-${result.label}`} {...result} />
@@ -44,20 +42,11 @@ function CauldronStage() {
             </span>
             <p className="m-0">Check your ingredients and try again.</p>
           </>
-        ) : (
-          <>
-            <span className="font-mono text-[11px] tracking-[0.12em] text-slime uppercase">
-              Result placeholder
-            </span>
-            <p className="m-0">
-              {isAutomating ? "Stirring the brew…" : "Your brew will rise here…"}
-            </p>
-          </>
-        )}
+        ) : null}
       </div>
 
       {/* vapor between pot and result — thicker and purple once a result rises */}
-      <div className="relative h-10 w-[200px] flex-none" aria-hidden="true">
+      <div className="relative h-10 w-50 flex-none" aria-hidden="true">
         {[
           "left-10",
           "left-[90px] [animation-delay:1.2s]",

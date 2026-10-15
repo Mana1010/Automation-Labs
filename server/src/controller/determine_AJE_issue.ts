@@ -12,6 +12,11 @@ import { addInGoogleSheet } from "../api/google-sheet";
 export default async function determineAJEIssue(req: Request, res: Response) {
   const { apiSecret, apiKey, urlDomain, sheetId } = req.body;
 
+  if (!apiSecret || !apiKey || !urlDomain || !sheetId) {
+    res.status(401).json({ message: "Something went wrong" });
+    return;
+  }
+
   // SOA
   //   SOA (USD)
   // SOA (PHP)
