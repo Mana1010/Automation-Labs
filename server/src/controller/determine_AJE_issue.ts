@@ -11,7 +11,7 @@ import { addInGoogleSheet } from "../api/google-sheet";
 
 export default async function determineAJEIssue(req: Request, res: Response) {
   const { apiSecret, apiKey, urlDomain, sheetId } = req.body;
-
+  let total = 0;
   if (!apiSecret || !apiKey || !urlDomain || !sheetId) {
     res.status(401).json({ message: "Something went wrong" });
     return;
@@ -110,13 +110,11 @@ export default async function determineAJEIssue(req: Request, res: Response) {
         googleSheetPayload,
       );
 
-      const isAJECorrect = !isAJEHasDiscrepancy?.length;
-      if (isAJECorrect) {
-        continue;
-      }
+      const isAJECorrect = (isAJEHasDiscrepancy?.length ?? 0) > 0;
+      if (isAJECorrect) continue;
     }
     const totalDiscrepancies = googleSheetPayload.length;
-    console.log(totalDiscrepancies);
+    console.log(JSON.stringify(googleSheetPayload));
     addInGoogleSheet(sheetId, googleSheetPayload);
     res.status(200).json({
       data: totalDiscrepancies,

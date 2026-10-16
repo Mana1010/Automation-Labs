@@ -5,94 +5,148 @@ import {
   SalesInvoice,
 } from "../types/determine_AJE_issue";
 import { formatLarkSheetPayload } from "./formatLarkSheetPayload";
+import { isSameAmount } from "./money-tolerance";
 
+let total = 0;
 export function checkAJEDiscrepancy(
   si: SalesInvoice,
   je: JournalEntry[] | undefined,
   gl: GLEntry[] | undefined,
   larkSheetPayload: any[],
 ) {
-  console.log("GL Count", je?.length);
   if (!je || !gl) return;
-  let sentences = [] as SentenceList[];
+
   const grandSoaUSD = Math.abs(si?.grand_total ?? 0);
   const conversionRate = si?.conversion_rate || 1;
   const grandSoaPHP = grandSoaUSD * conversionRate;
-
   const [totalJeaDebit, totalJeaCredit] = calculateTotalDebitOrCredit(je);
   const [totalJeaDebitCurr, totalJeaCreditCurr] =
     calculateTotalDebitOrCreditInCurrency(je);
-  if (totalJeaDebit !== grandSoaPHP || totalJeaCredit !== grandSoaPHP) {
-    sentences.push("JEA_MULTIPLE_DEBIT_CREDIT_IN_PHP_NOT_MATCH");
-  }
+  const updatedDataArr = [] as (JournalEntry & { sentences: SentenceList[] })[];
+  //If null means the jea are multiple
+  const nonMultiJE = je.reduce(
+    (acc, val) => {
+      if (acc[val.name] === 2) {
+        acc[val.name] = null;
+      } else {
+        acc[val.name] = (acc[val.name] ?? 0) + 1;
+      }
+      return acc;
+    },
+    {} as Record<string, number | null>,
+  );
 
-  if (grandSoaUSD !== totalJeaDebitCurr || grandSoaUSD !== totalJeaCreditCurr) {
-    sentences.push("JEA_MULTIPLE_DEBIT_CREDIT_IN_CURRENCY_NOT_MATCH");
-  }
+  //This check to ensure that only two JEA (Premium and Clearing) can be done
+  const twiceJeaOnly = Object.entries(nonMultiJE)
+    // oxlint-disable-next-line no-unused-vars
+    .filter(([_, value]) => value !== null)
+    .map((d) => d[0]);
+
+  // if (totalJeaDebit !== grandSoaPHP || totalJeaCredit !== grandSoaPHP) {
+  //   sentences.push("JEA_MULTIPLE_DEBIT_CREDIT_IN_CURRENCY_NOT_MATCH");
+  // }
+
+  // if (grandSoaUSD !== totalJeaDebitCurr || grandSoaUSD !== totalJeaCreditCurr) {
+  //   sentences.push("JEA_MULTIPLE_DEBIT_CREDIT_IN_CURRENCY_NOT_MATCH");
+  // }
 
   for (const item of je) {
+    if (!twiceJeaOnly.includes(item.name)) continue;
+
+    let findJeIndex = updatedDataArr.findIndex((j) => j.name === item.name);
     const totalDebit = Math.abs(item.total_debit);
     const totalCredit = Math.abs(item.total_credit);
     const jeaTotalCredit = Math.abs(item.jea_credit || 0);
     const jeaTotalDebit = Math.abs(item.jea_debit || 0);
-    if (grandSoaPHP !== totalCredit || grandSoaPHP !== totalDebit) {
-      sentences.push("JE_TOTAL_DEBIT_CREDIT_NOT_MATCH");
-    }
-    if (
-      jeaTotalDebit > 0 &&
-      grandSoaPHP !== jeaTotalDebit &&
-      !(je.length > 2)
-    ) {
-      sentences.push("JEA_DEBIT_CREDIT_IN_PHP_NOT_MATCH");
+
+    //If the journal entry is not present yet
+    if (findJeIndex === -1) {
+      updatedDataArr.push({ ...item, sentences: [] });
+      findJeIndex = updatedDataArr.length - 1;
     }
 
-    if (
-      jeaTotalCredit > 0 &&
-      grandSoaPHP !== jeaTotalCredit &&
-      !(je.length > 2)
-    ) {
-      sentences.push("JEA_DEBIT_CREDIT_IN_PHP_NOT_MATCH");
+    if (grandSoaPHP !== totalCredit || grandSoaPHP !== totalDebit) {
+      updatedDataArr[findJeIndex]?.sentences.push(
+        "JE_TOTAL_DEBIT_CREDIT_NOT_MATCH",
+      );
+    }
+    if (jeaTotalDebit > 0 && grandSoaPHP !== jeaTotalDebit) {
+      updatedDataArr[findJeIndex]?.sentences.push(
+        "JEA_DEBIT_CREDIT_IN_PHP_NOT_MATCH",
+      );
+    }
+
+    if (jeaTotalCredit > 0 && grandSoaPHP !== jeaTotalCredit) {
+      updatedDataArr[findJeIndex]?.sentences.push(
+        "JEA_DEBIT_CREDIT_IN_PHP_NOT_MATCH",
+      );
     }
 
     if (
       (item.jea_credit_in_currency || 0) > 0 &&
-      grandSoaUSD !== item.jea_credit_in_currency &&
-      !(je.length > 2)
+      grandSoaUSD !== item.jea_credit_in_currency
     ) {
-      sentences.push("JEA_DEBIT_CREDIT_IN_CURRENCY_NOT_MATCH");
+      updatedDataArr[findJeIndex]?.sentences.push(
+        "JEA_DEBIT_CREDIT_IN_CURRENCY_NOT_MATCH",
+      );
     }
 
     if (
       (item.jea_debit_in_currency || 0) > 0 &&
-      grandSoaUSD !== item.jea_debit_in_currency &&
-      !(je.length > 2)
+      grandSoaUSD !== item.jea_debit_in_currency
     ) {
-      sentences.push("JEA_DEBIT_CREDIT_IN_CURRENCY_NOT_MATCH");
+      updatedDataArr[findJeIndex]?.sentences.push(
+        "JEA_DEBIT_CREDIT_IN_CURRENCY_NOT_MATCH",
+      );
     }
 
-    if (conversionRate !== item.jea_rate) {
-      sentences.push("JEA_EXCHANGE_RATE_NOT_MATCH");
+    if (!isSameAmount(conversionRate, item.jea_rate ?? 0, "RATE_TOLERANCE")) {
+      updatedDataArr[findJeIndex]?.sentences.push(
+        "JEA_EXCHANGE_RATE_NOT_MATCH",
+      );
     }
   }
 
   for (const item of gl) {
+    if (!twiceJeaOnly.includes(item.voucher_no)) continue;
+
+    const findJeIndex = updatedDataArr.findIndex(
+      (j) => j.name === item.voucher_no,
+    );
+
+    if (findJeIndex === -1) continue;
+
     const totalDebit = Math.abs(item.debit);
     const totalCredit = Math.abs(item.credit);
 
-    if (grandSoaPHP !== totalCredit || grandSoaUSD !== totalDebit) {
-      sentences.push("GL_ENTRY_DEBIT_CREDIT_IN_PHP_NOT_MATCH");
+    if (grandSoaPHP !== totalCredit || grandSoaPHP !== totalDebit) {
+      updatedDataArr[findJeIndex]?.sentences.push(
+        "GL_ENTRY_DEBIT_CREDIT_IN_PHP_NOT_MATCH",
+      );
     }
 
     if (
-      (grandSoaUSD !== item.credit_in_account_currency ||
-        grandSoaPHP !== item.debit_in_account_currency) &&
-      !(gl.length > 2)
+      grandSoaUSD !== item.credit_in_account_currency ||
+      grandSoaUSD !== item.debit_in_account_currency
     ) {
-      sentences.push("GL_ENTRY_DEBIT_CREDIT_IN_NOT_MATCH");
+      updatedDataArr[findJeIndex]?.sentences.push(
+        "GL_ENTRY_DEBIT_CREDIT_IN_CURRENCY_NOT_MATCH",
+      );
     }
   }
-  formatLarkSheetPayload(larkSheetPayload, si, je, gl);
-  return descriptionFormat(sentences);
+
+  const formattedJeDataList = updatedDataArr.map((j) => {
+    // oxlint-disable-next-line no-unused-vars
+    const { sentences, ...d } = j;
+
+    return {
+      ...d,
+      description: descriptionFormat(sentences),
+    };
+  });
+
+  formatLarkSheetPayload(larkSheetPayload, si, formattedJeDataList, gl);
+  return formattedJeDataList;
 }
 
 function calculateTotalDebitOrCredit(je: JournalEntry[]) {
@@ -118,7 +172,7 @@ function calculateTotalDebitOrCreditInCurrency(je: JournalEntry[]) {
   const total = je.reduce(
     (acc, val) => {
       const debit = Math.abs(val.jea_debit_in_currency ?? 0);
-      const credit = Math.abs(val.jea_debit_in_currency ?? 0);
+      const credit = Math.abs(val.jea_credit_in_currency ?? 0);
       return {
         total_debit: acc.total_debit + debit,
         total_credit: acc.total_credit + credit,

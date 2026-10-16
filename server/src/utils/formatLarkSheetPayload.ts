@@ -16,14 +16,9 @@ import {
 export function formatLarkSheetPayload(
   larkSheetPayload: any[][],
   si: SalesInvoice,
-  je: JournalEntry[],
-  gl: GLEntry[],
+  je: (JournalEntry & { description: string })[],
 ) {
   const rows = [] as unknown[][];
-
-  const isAbove2JEA = je.length > 2 && gl.length > 2;
-
-  if (isAbove2JEA) return;
 
   //Will update this.....
   const seen = new Set(rows.map((r) => r[3]));
@@ -43,6 +38,7 @@ export function formatLarkSheetPayload(
       formatNumbers("en-US", totalDebitAndCreditJea),
       item.jea_rate,
       formatNumbers("en-PH", totalDebitAndCredit),
+      item.description,
     ]);
   }
   larkSheetPayload.push(...rows);

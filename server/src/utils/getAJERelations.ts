@@ -19,8 +19,9 @@ export function getAJERelation(
   const plainJeId = jeEntriesRelated.map((j) => j.name);
   for (let i = 0; i < gl.length; i++) {
     const glData = gl[i];
-    if (!glData?.voucher_no.startsWith("ACC-PINV")) continue;
-    if (plainJeId.includes(glData.voucher_no)) {
+
+    if (!glData?.voucher_no.startsWith("ACC-JV")) continue;
+    if (plainJeId.includes(glData?.voucher_no)) {
       glEntriesRelated.push(glData);
     }
   }
