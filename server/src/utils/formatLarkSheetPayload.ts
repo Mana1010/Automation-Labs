@@ -1,9 +1,5 @@
 import { formatNumbers } from "../api/format-numbers";
-import {
-  GLEntry,
-  JournalEntry,
-  SalesInvoice,
-} from "../types/determine_AJE_issue";
+import { JournalEntry, SalesInvoice } from "../types/determine_AJE_issue";
 
 // SOA
 //   SOA (USD)

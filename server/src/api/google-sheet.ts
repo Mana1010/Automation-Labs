@@ -1,9 +1,19 @@
 import path from "path";
 import { google } from "googleapis";
 import fs from "fs";
-const key = JSON.parse(
-  fs.readFileSync(path.join(process.cwd(), "src/key.json"), "utf8"),
-);
+
+function loadKey() {
+  const base64 = process.env.GOOGLE_KEY_BASE64!;
+  if (base64) {
+    const key = Buffer.from(base64, "base64").toString("utf-8");
+    return JSON.parse(key);
+  }
+  return JSON.parse(
+    fs.readFileSync(path.join(process.cwd(), "src/key.json"), "utf8"),
+  );
+}
+const key = loadKey();
+
 export const SERVICE_EMAIL: string = key.client_email;
 export async function addInGoogleSheet(
   sheetId: string,

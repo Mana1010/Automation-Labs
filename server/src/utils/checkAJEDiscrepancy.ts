@@ -145,7 +145,7 @@ export function checkAJEDiscrepancy(
     };
   });
 
-  formatLarkSheetPayload(larkSheetPayload, si, formattedJeDataList, gl);
+  formatLarkSheetPayload(larkSheetPayload, si, formattedJeDataList);
   return formattedJeDataList;
 }
 
