@@ -12,17 +12,16 @@ import { JournalEntry, SalesInvoice } from "../types/determine_AJE_issue";
 export function formatLarkSheetPayload(
   larkSheetPayload: any[][],
   si: SalesInvoice,
-  je: (JournalEntry & { description: string })[],
+  je: (JournalEntry & { description: string; code: string })[],
 ) {
   const rows = [] as unknown[][];
 
-  //Will update this.....
   const seen = new Set(rows.map((r) => r[3]));
   for (const item of je) {
     const totalDebitAndCreditJea =
       (item.jea_credit_in_currency || item.jea_debit_in_currency) ?? 0;
     const totalDebitAndCredit = item.total_credit || item.total_debit;
-    // const checkDuplicateJE = rows.some((r) => r[3] === item.name);
+
     if (seen.has(item.name)) continue;
     seen.add(item.name);
     rows.push([
@@ -35,8 +34,10 @@ export function formatLarkSheetPayload(
       item.jea_rate,
       formatNumbers("en-PH", totalDebitAndCredit),
       item.description,
+      item.code,
     ]);
   }
+  // console.log(rows);
   larkSheetPayload.push(...rows);
   return;
 }

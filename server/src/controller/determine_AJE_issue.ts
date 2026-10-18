@@ -88,11 +88,12 @@ export default async function determineAJEIssue(req: Request, res: Response) {
         },
       }),
     ]);
+
     const getSi = siRes?.data.data;
     const getJe = jeRes?.data.data;
     const getGL = glRes?.data.data;
     if (getSi.length <= 0 && getJe.length <= 0 && getGL.length <= 0) return;
-
+    console.log(getSi.length);
     for (let i = 0; i < getSi.length; i++) {
       const siData = getSi[i] as SalesInvoice;
 
@@ -114,7 +115,6 @@ export default async function determineAJEIssue(req: Request, res: Response) {
       if (isAJECorrect) continue;
     }
     const totalDiscrepancies = googleSheetPayload.length;
-    console.log(JSON.stringify(googleSheetPayload));
     addInGoogleSheet(sheetId, googleSheetPayload);
     res.status(200).json({
       data: totalDiscrepancies,

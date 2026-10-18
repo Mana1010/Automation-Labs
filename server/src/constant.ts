@@ -34,6 +34,13 @@ export function descriptionFormat(sentences: SentenceList[]): string {
   return format;
 }
 
-const JE_TOTAL_DEBIT_CREDIT_NOT_MATCH_SCRIPT = `
+export type CodesInObj = Record<"JEA" | "JE" | "GL", string[]>;
+export function formatCodes(obj: CodesInObj) {
+  const codes = Object.values(obj).flat(1);
+  let format = ``;
 
-`;
+  for (const code of codes) {
+    format += `${code}\n`;
+  }
+  return format;
+}

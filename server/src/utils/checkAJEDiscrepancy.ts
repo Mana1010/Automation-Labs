@@ -1,4 +1,9 @@
-import { descriptionFormat, SentenceList } from "../constant";
+import {
+  CodesInObj,
+  descriptionFormat,
+  formatCodes,
+  SentenceList,
+} from "../constant";
 import {
   GLEntry,
   JournalEntry,
@@ -14,19 +19,33 @@ export function checkAJEDiscrepancy(
   gl: GLEntry[] | undefined,
   larkSheetPayload: any[],
 ) {
+  const obj = je?.map((g) => {
+    return {
+      soa: si.name,
+      je: g.name,
+      jea: g.jea_name,
+    };
+  });
+
+  // console.log(JSON.stringify(obj));
+  // console.log(gl?.length);
   if (!je || !gl) return;
 
   const grandSoaUSD = Math.abs(si?.grand_total ?? 0);
-  const conversionRate = si?.conversion_rate || 1;
-  const grandSoaPHP = grandSoaUSD * conversionRate;
+  const soaConversionRate = si?.conversion_rate || 1;
+  const grandSoaPHP = grandSoaUSD * soaConversionRate;
   const [totalJeaDebit, totalJeaCredit] = calculateTotalDebitOrCredit(je);
   const [totalJeaDebitCurr, totalJeaCreditCurr] =
     calculateTotalDebitOrCreditInCurrency(je);
-  const updatedDataArr = [] as (JournalEntry & { sentences: SentenceList[] })[];
-  //If null means the jea are multiple
+  const updatedDataArr = [] as (JournalEntry & {
+    sentences: SentenceList[];
+    codes: CodesInObj;
+  })[];
+
+  // //If null means the jea are multiple
   const nonMultiJE = je.reduce(
     (acc, val) => {
-      if (acc[val.name] === 2) {
+      if (acc[val.name] === 2 || acc[val.name] === null) {
         acc[val.name] = null;
       } else {
         acc[val.name] = (acc[val.name] ?? 0) + 1;
@@ -42,6 +61,12 @@ export function checkAJEDiscrepancy(
     .filter(([_, value]) => value !== null)
     .map((d) => d[0]);
 
+  // const boleh = Object.entries(nonMultiJE)
+  //   // oxlint-disable-next-line no-unused-vars
+  //   .filter(([_, value]) => value === null)
+  //   .map((d) => d[0]);
+
+  // console.log(boleh);
   // if (totalJeaDebit !== grandSoaPHP || totalJeaCredit !== grandSoaPHP) {
   //   sentences.push("JEA_MULTIPLE_DEBIT_CREDIT_IN_CURRENCY_NOT_MATCH");
   // }
@@ -50,9 +75,25 @@ export function checkAJEDiscrepancy(
   //   sentences.push("JEA_MULTIPLE_DEBIT_CREDIT_IN_CURRENCY_NOT_MATCH");
   // }
 
-  for (const item of je) {
-    if (!twiceJeaOnly.includes(item.name)) continue;
+  function jeaCodescript(
+    jeaName: string | null,
+    type: "credit" | "debit",
+    operation: "-" | "",
+  ) {
+    return `
+         # Journal Entry Account (${type[0]?.toUpperCase() + type.slice(1)} in Account Currency)
+          frappe.db.set_value('Journal Entry Account', '${jeaName}', {
+          'exchange_rate': ${soaConversionRate},
+          '${type}': ${operation}${grandSoaPHP},
+          '${type}_in_account_currency': ${operation}${grandSoaUSD}
+          })
+        `;
+  }
 
+  for (const item of je) {
+    if (!twiceJeaOnly.includes(item.name)) {
+      continue;
+    }
     let findJeIndex = updatedDataArr.findIndex((j) => j.name === item.name);
     const totalDebit = Math.abs(item.total_debit);
     const totalCredit = Math.abs(item.total_credit);
@@ -61,25 +102,66 @@ export function checkAJEDiscrepancy(
 
     //If the journal entry is not present yet
     if (findJeIndex === -1) {
-      updatedDataArr.push({ ...item, sentences: [] });
+      updatedDataArr.push({
+        ...item,
+        sentences: [],
+        codes: {
+          JE: [],
+          JEA: [],
+          GL: [],
+        },
+      });
       findJeIndex = updatedDataArr.length - 1;
     }
 
+    const jeaCodes = updatedDataArr[findJeIndex]?.codes.JEA;
+    const jeCodes = updatedDataArr[findJeIndex]?.codes.JE;
+    const isNegativeJe = item.total_credit < 0 ? "-" : "";
+    //For Journal Entry
     if (grandSoaPHP !== totalCredit || grandSoaPHP !== totalDebit) {
       updatedDataArr[findJeIndex]?.sentences.push(
         "JE_TOTAL_DEBIT_CREDIT_NOT_MATCH",
       );
+      if (jeCodes?.length === 0) {
+        const codeScript = `
+        #Auto Created Journal Entry
+        frappe.db.set_value('Journal Entry', '${item.name}', {
+        'total_credit': ${isNegativeJe}${grandSoaPHP},
+        'total_debit': ${isNegativeJe}${grandSoaPHP}
+        })
+        `;
+        jeCodes?.push(codeScript);
+      }
     }
+
+    //For Journal Entry Account
+    const isNegativeJeaDebit = (item.jea_debit || 0) < 0 ? "-" : "";
+    const isNegativeJeaCredit = (item.jea_credit || 0) < 0 ? "-" : "";
+    let isCreditIncluded = jeaCodes?.some((c) => c.includes("credit"));
+    let isDebitIncluded = jeaCodes?.some((c) => c.includes("debit"));
     if (jeaTotalDebit > 0 && grandSoaPHP !== jeaTotalDebit) {
       updatedDataArr[findJeIndex]?.sentences.push(
         "JEA_DEBIT_CREDIT_IN_PHP_NOT_MATCH",
       );
+
+      if (!isDebitIncluded) {
+        jeaCodes?.push(
+          jeaCodescript(item.jea_name, "debit", isNegativeJeaCredit),
+        );
+        isDebitIncluded = jeaCodes?.some((c) => c.includes("debit"));
+      }
     }
 
     if (jeaTotalCredit > 0 && grandSoaPHP !== jeaTotalCredit) {
       updatedDataArr[findJeIndex]?.sentences.push(
         "JEA_DEBIT_CREDIT_IN_PHP_NOT_MATCH",
       );
+      if (!isCreditIncluded) {
+        jeaCodes?.push(
+          jeaCodescript(item.jea_name, "credit", isNegativeJeaCredit),
+        );
+        isCreditIncluded = jeaCodes?.some((c) => c.includes("credit"));
+      }
     }
 
     if (
@@ -89,6 +171,13 @@ export function checkAJEDiscrepancy(
       updatedDataArr[findJeIndex]?.sentences.push(
         "JEA_DEBIT_CREDIT_IN_CURRENCY_NOT_MATCH",
       );
+
+      if (!isCreditIncluded) {
+        jeaCodes?.push(
+          jeaCodescript(item.jea_name, "credit", isNegativeJeaCredit),
+        );
+        isCreditIncluded = jeaCodes?.some((c) => c.includes("credit"));
+      }
     }
 
     if (
@@ -98,18 +187,49 @@ export function checkAJEDiscrepancy(
       updatedDataArr[findJeIndex]?.sentences.push(
         "JEA_DEBIT_CREDIT_IN_CURRENCY_NOT_MATCH",
       );
+      if (!isDebitIncluded) {
+        jeaCodes?.push(
+          jeaCodescript(item.jea_name, "debit", isNegativeJeaDebit),
+        );
+        isDebitIncluded = jeaCodes?.some((c) => c.includes("debit"));
+      }
     }
 
-    if (!isSameAmount(conversionRate, item.jea_rate ?? 0, "RATE_TOLERANCE")) {
+    if (
+      !isSameAmount(soaConversionRate, item.jea_rate ?? 0, "RATE_TOLERANCE")
+    ) {
       updatedDataArr[findJeIndex]?.sentences.push(
         "JEA_EXCHANGE_RATE_NOT_MATCH",
       );
+
+      if (!isDebitIncluded && !isCreditIncluded) {
+        const codeScript = `
+          frappe.db.set_value('Journal Entry Account', '${item.jea_name}', {
+          'exchange_rate': ${soaConversionRate},
+          })
+        `;
+        isCreditIncluded = jeaCodes?.some((c) => c.includes("credit"));
+        isDebitIncluded = jeaCodes?.some((c) => c.includes("debit"));
+        jeaCodes?.push(codeScript);
+      }
     }
   }
 
+  function glCodescript(
+    glName: string | null,
+    type: "credit" | "debit",
+    isNegative: "-" | "",
+  ) {
+    return `
+         # GL Entry (${type[0]?.toUpperCase() + type.slice(1)} in Account Currency)
+          frappe.db.set_value('GL Entry', '${glName}', {
+          '${type}': ${isNegative}${grandSoaPHP},
+          '${type}_in_account_currency': ${isNegative}${grandSoaUSD}
+          })                                                                                                                                                  
+        `;
+  }
   for (const item of gl) {
     if (!twiceJeaOnly.includes(item.voucher_no)) continue;
-
     const findJeIndex = updatedDataArr.findIndex(
       (j) => j.name === item.voucher_no,
     );
@@ -118,7 +238,8 @@ export function checkAJEDiscrepancy(
 
     const totalDebit = Math.abs(item.debit);
     const totalCredit = Math.abs(item.credit);
-
+    const isNegativeDebit = item.debit < 0 ? "-" : "";
+    const isNegativeCredit = item.credit < 0 ? "-" : "";
     if (grandSoaPHP !== totalCredit || grandSoaPHP !== totalDebit) {
       updatedDataArr[findJeIndex]?.sentences.push(
         "GL_ENTRY_DEBIT_CREDIT_IN_PHP_NOT_MATCH",
@@ -133,15 +254,24 @@ export function checkAJEDiscrepancy(
         "GL_ENTRY_DEBIT_CREDIT_IN_CURRENCY_NOT_MATCH",
       );
     }
+    if (totalDebit > 0) {
+      updatedDataArr[findJeIndex]?.codes.GL.push(
+        glCodescript(item.name, "debit", isNegativeDebit),
+      );
+    } else if (totalCredit > 0) {
+      updatedDataArr[findJeIndex]?.codes.GL.push(
+        glCodescript(item.name, "credit", isNegativeCredit),
+      );
+    }
   }
 
   const formattedJeDataList = updatedDataArr.map((j) => {
     // oxlint-disable-next-line no-unused-vars
-    const { sentences, ...d } = j;
-
+    const { sentences, codes, ...d } = j;
     return {
       ...d,
       description: descriptionFormat(sentences),
+      code: formatCodes(codes),
     };
   });
 
