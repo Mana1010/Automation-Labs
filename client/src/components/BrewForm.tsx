@@ -47,7 +47,7 @@ function BrewForm() {
       setResult(null);
 
       const getData = await axios.post(
-        `http://localhost:5000/automation/aje-issue`,
+        `https://automation-labs.onrender.com/automation/aje-issue`,
         data,
         {
           headers: {
